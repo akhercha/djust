@@ -1,22 +1,10 @@
-use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::Write;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Item {
-    name: String,
-    value: u32,
-}
-
+use raylib::consts::KeyboardKey::KEY_SPACE;
+use raylib::core::audio::{Music, RaylibAudio};
+use raylib::core::color::Color;
 use raylib::prelude::*;
 
-use raylib::consts::KeyboardKey::{KEY_A, KEY_SPACE};
-use raylib::core::audio::{Music, RaylibAudio};
-
-use raylib::core::color::Color;
-
 const MUSIC_NIGHTCORE: &str = "songs/light-it-up-nightcore.mp3";
-const BUFFER_SIZE: usize = 4096 + 1024;
+const BUFFER_SIZE: usize = 4096;
 
 fn get_samples_buffer(music: &Music) -> Vec<i32> {
     const HEADER_SIZE: usize = 87;
@@ -35,15 +23,6 @@ fn get_samples_buffer(music: &Music) -> Vec<i32> {
     my_buffer
 }
 
-fn normalize(buffer: &mut Vec<i32>, max_value: i32) {
-    let min_val = *buffer.iter().min().unwrap();
-    let max_val = *buffer.iter().max().unwrap();
-
-    for val in buffer.iter_mut() {
-        *val = (((*val - min_val) as f64 / (max_val - min_val) as f64) * max_value as f64) as i32;
-    }
-}
-
 fn main() {
     let (mut rl, thread) = raylib::init().size(860, 600).title("DJust").build();
 
@@ -53,17 +32,6 @@ fn main() {
     rl.set_target_fps(60);
 
     while !rl.window_should_close() {
-        {
-            let my_buffer = get_samples_buffer(&music);
-
-            if rl.is_key_pressed(KEY_A) {
-                let serialized = serde_json::to_string(&my_buffer).unwrap();
-                let mut file = File::create("output.json").expect("Unable to create file");
-                file.write_all(serialized.as_bytes())
-                    .expect("Unable to write data");
-            }
-        }
-
         // draws
         {
             let mut d = rl.begin_drawing(&thread);
