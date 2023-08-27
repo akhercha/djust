@@ -3,8 +3,8 @@ use raylib::core::audio::{Music, RaylibAudio};
 use raylib::core::color::Color;
 use raylib::prelude::*;
 
-const MUSIC_NIGHTCORE: &str = "songs/light-it-up-nightcore.mp3";
-const BUFFER_SIZE: usize = 4096;
+const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+const BUFFER_SIZE: usize = 2048;
 
 fn get_samples_buffer(music: &Music) -> Vec<i32> {
     const HEADER_SIZE: usize = 87;
@@ -27,7 +27,7 @@ fn main() {
     let (mut rl, thread) = raylib::init().size(860, 600).title("DJust").build();
 
     let mut ra: RaylibAudio = RaylibAudio::init_audio_device();
-    let mut music = Music::load_music_stream(&thread, MUSIC_NIGHTCORE).unwrap();
+    let mut music = Music::load_music_stream(&thread, MUSIC).unwrap();
     ra.play_music_stream(&mut music);
     rl.set_target_fps(60);
 
