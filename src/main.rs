@@ -6,7 +6,8 @@ use raylib::prelude::*;
 // const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const MUSIC: &str = "songs/crankdat-higher.ogg";
 // const MUSIC: &str = "songs/boom-boom-japan.ogg";
-const BUFFER_SIZE: usize = 4096;
+// Full magic numbers :)
+const BUFFER_SIZE: usize = 6144 - 256; // 256 at the end, some sort of header?
 
 fn get_samples_buffer(music: &Music) -> Vec<i16> {
     const HEADER_SIZE: usize = 128 + 64;
