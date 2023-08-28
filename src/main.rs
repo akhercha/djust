@@ -6,8 +6,9 @@ use std::os::raw::c_void;
 
 // Path to your music
 // const MUSIC: &str = "songs/dreams.ogg";
-const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 // const MUSIC: &str = "songs/crankdat-higher.ogg";
+const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
 struct Frame {
@@ -22,29 +23,26 @@ static mut GLOBAL_FRAMES: [Frame; BUFFER_CAPACITY] = [Frame {
 }; BUFFER_CAPACITY];
 static mut GLOBAL_FRAMES_COUNT: usize = 0;
 
-const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
-
 unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     let buffer_data = buffer_data as *mut Frame;
-    if frames as usize <= BUFFER_CAPACITY - GLOBAL_FRAMES_COUNT {
+    let frames: usize = frames as usize;
+    if frames <= BUFFER_CAPACITY - GLOBAL_FRAMES_COUNT {
         std::ptr::copy(
             buffer_data,
             GLOBAL_FRAMES.as_mut_ptr().add(GLOBAL_FRAMES_COUNT),
-            frames as usize,
+            frames,
         );
-        GLOBAL_FRAMES_COUNT += frames as usize;
-    } else if frames as usize <= BUFFER_CAPACITY {
+        GLOBAL_FRAMES_COUNT += frames;
+    } else if frames <= BUFFER_CAPACITY {
         std::ptr::copy(
-            GLOBAL_FRAMES.as_mut_ptr().offset(frames as isize),
+            GLOBAL_FRAMES.as_mut_ptr().add(frames),
             GLOBAL_FRAMES.as_mut_ptr(),
-            BUFFER_CAPACITY - frames as usize,
+            BUFFER_CAPACITY - frames,
         );
         std::ptr::copy(
             buffer_data,
-            GLOBAL_FRAMES
-                .as_mut_ptr()
-                .add(BUFFER_CAPACITY - frames as usize),
-            frames as usize,
+            GLOBAL_FRAMES.as_mut_ptr().add(BUFFER_CAPACITY - frames),
+            frames,
         );
     } else {
         std::ptr::copy(buffer_data, GLOBAL_FRAMES.as_mut_ptr(), BUFFER_CAPACITY);
