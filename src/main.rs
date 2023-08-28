@@ -29,9 +29,7 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     if frames as usize <= BUFFER_CAPACITY - GLOBAL_FRAMES_COUNT {
         std::ptr::copy(
             buffer_data,
-            GLOBAL_FRAMES
-                .as_mut_ptr()
-                .offset(GLOBAL_FRAMES_COUNT as isize),
+            GLOBAL_FRAMES.as_mut_ptr().add(GLOBAL_FRAMES_COUNT),
             frames as usize,
         );
         GLOBAL_FRAMES_COUNT += frames as usize;
@@ -45,7 +43,7 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
             buffer_data,
             GLOBAL_FRAMES
                 .as_mut_ptr()
-                .offset((BUFFER_CAPACITY - frames as usize) as isize),
+                .add(BUFFER_CAPACITY - frames as usize),
             frames as usize,
         );
     } else {
