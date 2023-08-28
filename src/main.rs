@@ -8,10 +8,12 @@ use raylib::core::color::Color;
 use raylib::prelude::*;
 use std::os::raw::c_void;
 
+use std::ptr::copy;
+
 // Path to your music
 // const MUSIC: &str = "songs/dreams.ogg";
-// const MUSIC: &str = "songs/crankdat-higher.ogg";
-const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+const MUSIC: &str = "songs/crankdat-higher.ogg";
+// const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
@@ -20,11 +22,10 @@ struct Frame {
     _right: f32,
 }
 
-const N: usize = 512;
+const N: usize = 16384;
 
 static mut INPS: [f32; N] = [0.0; N];
 static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
-static mut MAX_AMPL: f32 = 0.0;
 
 fn amp(z: Complex<f32>) -> f32 {
     let real_part = z.re.abs();
@@ -37,26 +38,14 @@ fn amp(z: Complex<f32>) -> f32 {
 }
 
 unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
-    let buffer_data = buffer_data as *mut Frame;
-    let frames: usize = frames as usize;
-    if frames < N {
-        return;
-    }
-    for (i, inp) in INPS.iter_mut().enumerate() {
-        if i >= N {
-            break;
-        }
-        let frame = &mut *buffer_data.add(i);
-        *inp = frame.left;
-    }
-    let outputs = fft(&INPS);
-    MAX_AMPL = 0.0;
-    for (i, out) in outputs.iter().enumerate() {
-        let a = amp(*out);
-        if MAX_AMPL < a {
-            MAX_AMPL = a;
-        }
-        OUTS[i] = *out;
+    let fs = buffer_data as *mut Frame;
+
+    let frames = frames as usize;
+    let shift_amount = if frames > N { N } else { frames };
+
+    INPS.rotate_left(shift_amount);
+    for i in 0..shift_amount {
+        INPS[N - shift_amount + i] = (*fs.add(i)).left;
     }
 }
 
@@ -70,18 +59,56 @@ fn main() {
         ffi::AttachAudioStreamProcessor(music.stream, Some(callback));
     }
     rl.set_target_fps(60);
+
+    let mut counter_fft: usize = 0;
     while !rl.window_should_close() {
         {
             let mut d = rl.begin_drawing(&thread);
+
             d.clear_background(Color::new(12, 12, 13, 255));
+
             let h = d.get_screen_height() as f32;
             let w = d.get_screen_width() as f32;
-            let cell_w: f32 = w / N as f32;
+
             unsafe {
-                for (i, out) in OUTS.iter().enumerate() {
-                    let t = amp(*out) / MAX_AMPL;
+                if counter_fft % 4 == 0 {
+                    fft(&INPS, &mut OUTS);
+                }
+            }
+
+            let mut max_ampl: f32 = 0.0;
+            unsafe {
+                for out in OUTS {
+                    let a = amp(out);
+                    if max_ampl < a {
+                        max_ampl = a;
+                    }
+                }
+            }
+
+            let step: f32 = 1.06;
+            let mut f: f32 = 20.0;
+            let mut m: usize = 0;
+            while (f as usize) < N {
+                f *= step;
+                m += 1;
+            }
+            let cell_w: f32 = w / m as f32;
+            m = 0;
+            f = 20.0;
+            while (f as usize) < N {
+                let f1: f32 = f * step;
+                let mut a: f32 = 0.0;
+                unsafe {
+                    let mut q: usize = f as usize;
+                    while (q < N) && (q < f1 as usize) {
+                        a += amp(OUTS[q]);
+                        q += 1;
+                    }
+                    a /= (f1 as usize - f as usize + 1) as f32;
+                    let t = a / (max_ampl / 2.0);
                     let v_pos = Vector2 {
-                        x: cell_w * i as f32,
+                        x: cell_w * m as f32,
                         y: h - (h * t),
                     };
                     let v_size = Vector2 {
@@ -90,6 +117,8 @@ fn main() {
                     };
                     d.draw_rectangle_v(v_pos, v_size, COLOR_PALE_RED);
                 }
+                f *= step;
+                m += 1;
             }
         }
         {
@@ -104,5 +133,6 @@ fn main() {
         {
             ra.update_music_stream(&mut music);
         }
+        counter_fft += 1;
     }
 }

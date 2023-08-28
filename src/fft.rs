@@ -3,24 +3,25 @@ use std::f32::consts::PI;
 
 /// Fast Fourier Transform
 /// https://en.wikipedia.org/wiki/Fast_Fourier_transform
-pub fn fft(inputs: &[f32]) -> Vec<Complex<f32>> {
-    let n = inputs.len();
-    if n <= 1 {
-        return vec![Complex::new(inputs[0], 0.0)];
+fn fft_recursive(inputs: &[f32], outputs: &mut [Complex<f32>], step: usize) {
+    let n = outputs.len();
+    if n == 1 {
+        outputs[0] = Complex::new(inputs[0], 0.0);
+        return;
     }
-    let even_inputs: Vec<_> = inputs.iter().step_by(2).cloned().collect();
-    let odd_inputs: Vec<_> = inputs.iter().skip(1).step_by(2).cloned().collect();
 
-    let even = fft(&even_inputs);
-    let odd = fft(&odd_inputs);
+    let half_n = n / 2;
+    fft_recursive(inputs, &mut outputs[..half_n], step * 2);
+    fft_recursive(&inputs[step..], &mut outputs[half_n..], step * 2);
 
-    let mut outputs = vec![Complex::new(0.0, 0.0); n];
-    for k in 0..(n / 2) {
+    for k in 0..half_n {
         let t = (k as f32) / (n as f32);
-        let v = Complex::from_polar(1.0, -2.0 * PI * t) * odd[k];
-        outputs[k] = even[k] + v;
-        outputs[k + n / 2] = even[k] - v;
+        let v = Complex::from_polar(1.0, -2.0 * PI * t) * outputs[k + half_n];
+        outputs[k + half_n] = outputs[k] - v;
+        outputs[k] += v;
     }
+}
 
-    outputs
+pub fn fft(inputs: &[f32], output: &mut [Complex<f32>]) {
+    fft_recursive(inputs, output, 1);
 }
