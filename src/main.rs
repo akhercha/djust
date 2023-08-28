@@ -10,17 +10,18 @@ use std::os::raw::c_void;
 
 // Path to your music
 // const MUSIC: &str = "songs/dreams.ogg";
-const MUSIC: &str = "songs/crankdat-higher.ogg";
-// const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+// const MUSIC: &str = "songs/crankdat-higher.ogg";
+const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
 struct Frame {
     left: f32,
-    right: f32,
+    _right: f32,
 }
 
 const N: usize = 512;
+
 static mut INPS: [f32; N] = [0.0; N];
 static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
 static mut MAX_AMPL: f32 = 0.0;
@@ -49,14 +50,13 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
         *inp = frame.left;
     }
     let outputs = fft(&INPS);
-
     MAX_AMPL = 0.0;
-    for i in 0..N {
-        let a = amp(OUTS[i]);
+    for (i, out) in outputs.iter().enumerate() {
+        let a = amp(*out);
         if MAX_AMPL < a {
             MAX_AMPL = a;
         }
-        OUTS[i] = outputs[i];
+        OUTS[i] = *out;
     }
 }
 
@@ -69,7 +69,6 @@ fn main() {
     unsafe {
         ffi::AttachAudioStreamProcessor(music.stream, Some(callback));
     }
-
     rl.set_target_fps(60);
     while !rl.window_should_close() {
         {
@@ -77,10 +76,10 @@ fn main() {
             d.clear_background(Color::new(12, 12, 13, 255));
             let h = d.get_screen_height() as f32;
             let w = d.get_screen_width() as f32;
+            let cell_w: f32 = w / N as f32;
             unsafe {
-                let cell_w: f32 = w / N as f32;
-                for i in 0..N {
-                    let t = amp(OUTS[i]) / MAX_AMPL;
+                for (i, out) in OUTS.iter().enumerate() {
+                    let t = amp(*out) / MAX_AMPL;
                     let v_pos = Vector2 {
                         x: cell_w * i as f32,
                         y: h - (h * t),
