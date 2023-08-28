@@ -60,19 +60,6 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     }
 }
 
-fn get_drawable_vecs(sample: f32, cell_w: f32, h: f32, i: f32) -> (Vector2, Vector2) {
-    (
-        Vector2 {
-            x: cell_w * i,
-            y: h - (h * sample),
-        },
-        Vector2 {
-            x: cell_w,
-            y: (h * sample),
-        },
-    )
-}
-
 fn main() {
     let (mut rl, thread) = raylib::init().size(860, 600).title("DJust").build();
 
@@ -94,7 +81,14 @@ fn main() {
                 let cell_w: f32 = w / N as f32;
                 for i in 0..N {
                     let t = amp(OUTS[i]) / MAX_AMPL;
-                    let (v_pos, v_size) = get_drawable_vecs(t, cell_w, h, i as f32);
+                    let v_pos = Vector2 {
+                        x: cell_w * i as f32,
+                        y: h - (h * t),
+                    };
+                    let v_size = Vector2 {
+                        x: cell_w,
+                        y: (h * t),
+                    };
                     d.draw_rectangle_v(v_pos, v_size, COLOR_PALE_RED);
                 }
             }
