@@ -12,8 +12,8 @@ use std::ptr::copy;
 
 // Path to your music
 // const MUSIC: &str = "songs/dreams.ogg";
-const MUSIC: &str = "songs/crankdat-higher.ogg";
-// const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+// const MUSIC: &str = "songs/crankdat-higher.ogg";
+const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
@@ -39,13 +39,10 @@ fn amp(z: Complex<f32>) -> f32 {
 
 unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     let fs = buffer_data as *mut Frame;
-
     let frames = frames as usize;
-    let shift_amount = if frames > N { N } else { frames };
-
-    INPS.rotate_left(shift_amount);
-    for i in 0..shift_amount {
-        INPS[N - shift_amount + i] = (*fs.add(i)).left;
+    INPS.rotate_left(frames);
+    for i in 0..frames {
+        INPS[N - frames + i] = (*fs.add(i)).left;
     }
 }
 
@@ -71,7 +68,7 @@ fn main() {
             let w = d.get_screen_width() as f32;
 
             unsafe {
-                if counter_fft % 4 == 0 {
+                if counter_fft % 3 == 0 {
                     fft(&INPS, &mut OUTS);
                 }
             }
@@ -106,7 +103,7 @@ fn main() {
                         q += 1;
                     }
                     a /= (f1 as usize - f as usize + 1) as f32;
-                    let t = a / (max_ampl / 2.0);
+                    let t = a / (max_ampl / 3.0);
                     let v_pos = Vector2 {
                         x: cell_w * m as f32,
                         y: h - (h * t),
