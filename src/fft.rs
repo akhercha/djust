@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 
 /// Fast Fourier Transform
 /// https://en.wikipedia.org/wiki/Fast_Fourier_transform
-fn fft(inputs: &[f32]) -> Vec<Complex<f32>> {
+pub fn fft(inputs: &[f32]) -> Vec<Complex<f32>> {
     let n = inputs.len();
     if n <= 1 {
         return vec![Complex::new(inputs[0], 0.0)];
