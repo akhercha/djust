@@ -1,3 +1,5 @@
+mod fft;
+
 use raylib::consts::KeyboardKey::KEY_SPACE;
 use raylib::core::audio::{Music, RaylibAudio};
 use raylib::core::color::Color;
