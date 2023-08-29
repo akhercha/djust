@@ -20,7 +20,9 @@ pub fn draw_text_in_center(d: &mut RaylibDrawHandle, text: &str, color: Color) {
 pub fn draw_screen(d: &mut RaylibDrawHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
     if let Some(music) = music.as_mut() {
         ra.update_music_stream(music);
-        draw_music(d);
+        if ra.is_music_stream_playing(music) {
+            draw_music(d);
+        }
     } else {
         draw_text_in_center(d, "Drag&Drop music here", Color::WHITE);
     }

@@ -7,24 +7,21 @@ use std::os::raw::c_void;
 const N: usize = 16384;
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
-static mut FRAMES_COUNTER: usize = 0;
+const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
+
 static mut INPS: [f32; N] = [0.0; N];
+// Smoothed input
+static mut INPS_TWO: [f32; N] = [0.0; N];
 static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
 
 #[derive(Clone, Copy)]
 struct Frame {
     left: f32,
-    right: f32,
+    _right: f32,
 }
 
 fn amp(z: Complex<f32>) -> f32 {
-    let real_part = z.re.abs();
-    let imag_part = z.im.abs();
-    if real_part >= imag_part {
-        real_part
-    } else {
-        imag_part
-    }
+    (z.re * z.re + z.im * z.im).sqrt()
 }
 
 pub unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
@@ -32,8 +29,7 @@ pub unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     let frames = frames as usize;
     INPS.rotate_left(frames);
     for i in 0..frames {
-        let avg_frame = ((*fs.add(i)).left + (*fs.add(i)).right) / 2.0;
-        INPS[N - frames + i] = avg_frame;
+        INPS[N - frames + i] = (*fs.add(i)).left;
     }
 }
 
@@ -45,56 +41,64 @@ pub fn draw_music(d: &mut RaylibDrawHandle) {
     let w = d.get_screen_width() as f32;
 
     unsafe {
-        if FRAMES_COUNTER % 3 == 0 {
-            fft(&INPS, &mut OUTS);
+        for (i, inp) in INPS.iter().enumerate().take(N / 2) {
+            let t = i as f32 / N as f32;
+            let hann = 0.5 - 0.5 * (TWO_PI * t).cos();
+            INPS_TWO[i] = inp * hann;
         }
+        fft(&INPS_TWO, &mut OUTS);
     }
 
     let mut max_ampl: f32 = 0.0;
     unsafe {
-        for out in OUTS {
-            let a = amp(out);
+        for out in OUTS.iter().take(N / 2) {
+            let a = amp(*out);
             if max_ampl < a {
                 max_ampl = a;
             }
         }
     }
 
-    let step: f32 = 1.8;
-    let mut f: f32 = 20.0;
+    let step: f32 = 1.06;
+    let low_f: f32 = 20.0;
+    let mut f: f32 = low_f;
     let mut m: usize = 0;
-    while (f as usize) < N {
-        f *= step;
+    while (f as usize) < N / 2 {
+        f = (f * step).ceil();
         m += 1;
     }
+    // Get the width of a cell
     let cell_w: f32 = w / m as f32;
     m = 0;
-    f = 20.0;
-    while (f as usize) < N {
-        let f1: f32 = f * step;
+    f = low_f;
+    // For each frequencies...
+    while (f as usize) < N / 2 {
+        let f1: f32 = (f * step).ceil();
         let mut a: f32 = 0.0;
         unsafe {
+            // Compute the average amplitude of the frequency band
             let mut q: usize = f as usize;
-            while (q < N) && (q < f1 as usize) {
-                a += amp(OUTS[q]);
+            while (q < N / 2) && (q < f1 as usize) {
+                let b: f32 = amp(OUTS[q]);
+                if b > a {
+                    a = b;
+                }
                 q += 1;
             }
-            a /= (f1 as usize - f as usize + 1) as f32;
-            let t = a / (max_ampl / 2.0);
+            // Normalize the amplitude
+            let t = a / (max_ampl);
             let v_pos = Vector2 {
                 x: cell_w * m as f32,
-                y: h - (h * t),
+                y: h - (h / 2.0 * t),
             };
             let v_size = Vector2 {
                 x: cell_w,
-                y: (h * t),
+                y: (h / 2.0 * t),
             };
+            // Draw the rectangle
             d.draw_rectangle_v(v_pos, v_size, COLOR_PALE_RED);
         }
-        f *= step;
+        f = (f * step).ceil();
         m += 1;
-    }
-    unsafe {
-        FRAMES_COUNTER += 1;
     }
 }
