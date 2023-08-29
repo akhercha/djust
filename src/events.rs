@@ -35,8 +35,8 @@ fn handle_file_dropped(
     if dropped_files.is_empty() {
         return;
     }
-    let filename = &dropped_files[0];
 
+    let filename = &dropped_files[0];
     for ext in MUSIC_EXTENSIONS.iter() {
         if !filename.ends_with(ext) {
             continue;
@@ -46,10 +46,10 @@ fn handle_file_dropped(
         }
         *music = Some(Music::load_music_stream(thread, filename).unwrap());
         ra.play_music_stream(music.as_mut().unwrap());
-        unsafe {
-            ffi::AttachAudioStreamProcessor(music.as_mut().unwrap().stream, Some(callback));
-        }
         break;
+    }
+    unsafe {
+        ffi::AttachAudioStreamProcessor(music.as_mut().unwrap().stream, Some(callback));
     }
 }
 
