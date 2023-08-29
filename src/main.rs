@@ -8,12 +8,10 @@ use raylib::core::color::Color;
 use raylib::prelude::*;
 use std::os::raw::c_void;
 
-use std::ptr::copy;
-
 // Path to your music
 // const MUSIC: &str = "songs/dreams.ogg";
-// const MUSIC: &str = "songs/crankdat-higher.ogg";
-const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
+const MUSIC: &str = "songs/crankdat-higher.ogg";
+// const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
@@ -42,7 +40,7 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     let frames = frames as usize;
     INPS.rotate_left(frames);
     for i in 0..frames {
-        INPS[N - frames + i] = (*fs.add(i)).left;
+        INPS[N - frames + i] = ((*fs.add(i)).left + (*fs.add(i)).left) / 2.0;
     }
 }
 
@@ -83,7 +81,7 @@ fn main() {
                 }
             }
 
-            let step: f32 = 1.06;
+            let step: f32 = 1.1;
             let mut f: f32 = 20.0;
             let mut m: usize = 0;
             while (f as usize) < N {
@@ -103,7 +101,7 @@ fn main() {
                         q += 1;
                     }
                     a /= (f1 as usize - f as usize + 1) as f32;
-                    let t = a / (max_ampl / 3.0);
+                    let t = a / (max_ampl / 2.0);
                     let v_pos = Vector2 {
                         x: cell_w * m as f32,
                         y: h - (h * t),

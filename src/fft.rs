@@ -1,8 +1,6 @@
 use num::Complex;
 use std::f32::consts::PI;
 
-/// Fast Fourier Transform
-/// https://en.wikipedia.org/wiki/Fast_Fourier_transform
 fn fft_recursive(inputs: &[f32], outputs: &mut [Complex<f32>], step: usize) {
     let n = outputs.len();
     if n == 1 {
@@ -22,6 +20,8 @@ fn fft_recursive(inputs: &[f32], outputs: &mut [Complex<f32>], step: usize) {
     }
 }
 
+/// Fast Fourier Transform
+/// https://en.wikipedia.org/wiki/Fast_Fourier_transform
 pub fn fft(inputs: &[f32], output: &mut [Complex<f32>]) {
     fft_recursive(inputs, output, 1);
 }
