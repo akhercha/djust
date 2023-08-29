@@ -5,7 +5,7 @@ use super::dj::callback;
 
 const MUSIC_EXTENSIONS: [&str; 2] = [".mp3", ".ogg"];
 
-pub fn handle_key_events(rl: &mut RaylibHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
+fn handle_key_events(rl: &mut RaylibHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
     // Pause the music
     if rl.is_key_pressed(KEY_SPACE) {
         if let Some(m) = music.as_mut() {
@@ -25,15 +25,12 @@ pub fn handle_key_events(rl: &mut RaylibHandle, ra: &mut RaylibAudio, music: &mu
     }
 }
 
-pub fn handle_file_dropped(
+fn handle_file_dropped(
     rl: &mut RaylibHandle,
     ra: &mut RaylibAudio,
     thread: &RaylibThread,
     music: &mut Option<Music>,
 ) {
-    if !rl.is_file_dropped() {
-        return;
-    }
     let dropped_files = rl.load_dropped_files();
     if dropped_files.is_empty() {
         return;
@@ -53,5 +50,17 @@ pub fn handle_file_dropped(
             ffi::AttachAudioStreamProcessor(music.as_mut().unwrap().stream, Some(callback));
         }
         break;
+    }
+}
+
+pub fn handle_events(
+    rl: &mut RaylibHandle,
+    ra: &mut RaylibAudio,
+    thread: &RaylibThread,
+    music: &mut Option<Music>,
+) {
+    handle_key_events(rl, ra, music);
+    if rl.is_file_dropped() {
+        handle_file_dropped(rl, ra, thread, music);
     }
 }

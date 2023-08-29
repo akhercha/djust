@@ -7,6 +7,7 @@ use std::os::raw::c_void;
 const N: usize = 16384;
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
+static mut FRAMES_COUNTER: usize = 0;
 static mut INPS: [f32; N] = [0.0; N];
 static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
 
@@ -14,6 +15,16 @@ static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
 struct Frame {
     left: f32,
     right: f32,
+}
+
+fn amp(z: Complex<f32>) -> f32 {
+    let real_part = z.re.abs();
+    let imag_part = z.im.abs();
+    if real_part >= imag_part {
+        real_part
+    } else {
+        imag_part
+    }
 }
 
 pub unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
@@ -26,16 +37,6 @@ pub unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     }
 }
 
-pub fn amp(z: Complex<f32>) -> f32 {
-    let real_part = z.re.abs();
-    let imag_part = z.im.abs();
-    if real_part >= imag_part {
-        real_part
-    } else {
-        imag_part
-    }
-}
-
 // TODO: refacto this block
 pub fn draw_music(d: &mut RaylibDrawHandle) {
     d.clear_background(Color::new(12, 12, 13, 255));
@@ -44,7 +45,9 @@ pub fn draw_music(d: &mut RaylibDrawHandle) {
     let w = d.get_screen_width() as f32;
 
     unsafe {
-        fft(&INPS, &mut OUTS);
+        if FRAMES_COUNTER % 3 == 0 {
+            fft(&INPS, &mut OUTS);
+        }
     }
 
     let mut max_ampl: f32 = 0.0;
@@ -90,5 +93,8 @@ pub fn draw_music(d: &mut RaylibDrawHandle) {
         }
         f *= step;
         m += 1;
+    }
+    unsafe {
+        FRAMES_COUNTER += 1;
     }
 }
