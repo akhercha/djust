@@ -1,27 +1,18 @@
 mod dj;
+mod draw;
 mod events;
 mod fft;
 
-use dj::draw_music;
+use draw::draw_screen;
 use events::handle_events;
-use raylib::core::audio::{Music, RaylibAudio};
-use raylib::core::color::Color;
-use raylib::prelude::{RaylibDraw, RaylibDrawHandle};
+use raylib::core::audio::RaylibAudio;
+use raylib::prelude::RaylibDrawHandle;
 
 const WINDOW_NAME: &str = "DJust";
 const WINDOW_WIDTH: i32 = 860;
 const WINDOW_HEIGHT: i32 = 600;
 
 const FRAMES_PER_SECOND: u32 = 60;
-
-fn draw_screen(d: &mut RaylibDrawHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
-    if let Some(music) = music.as_mut() {
-        ra.update_music_stream(music);
-        draw_music(d);
-    } else {
-        d.draw_text("Drop a music!", 300, 280, 40, Color::WHITE);
-    }
-}
 
 fn main() {
     let (mut rl, thread) = raylib::init()

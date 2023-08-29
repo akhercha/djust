@@ -5,7 +5,7 @@ use super::dj::callback;
 
 const MUSIC_EXTENSIONS: [&str; 2] = [".mp3", ".ogg"];
 
-fn handle_key_events(rl: &mut RaylibHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
+fn handle_keys(rl: &mut RaylibHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
     // Pause the music
     if rl.is_key_pressed(KEY_SPACE) {
         if let Some(m) = music.as_mut() {
@@ -46,10 +46,10 @@ fn handle_file_dropped(
         }
         *music = Some(Music::load_music_stream(thread, filename).unwrap());
         ra.play_music_stream(music.as_mut().unwrap());
+        unsafe {
+            ffi::AttachAudioStreamProcessor(music.as_mut().unwrap().stream, Some(callback));
+        }
         break;
-    }
-    unsafe {
-        ffi::AttachAudioStreamProcessor(music.as_mut().unwrap().stream, Some(callback));
     }
 }
 
@@ -59,7 +59,7 @@ pub fn handle_events(
     thread: &RaylibThread,
     music: &mut Option<Music>,
 ) {
-    handle_key_events(rl, ra, music);
+    handle_keys(rl, ra, music);
     if rl.is_file_dropped() {
         handle_file_dropped(rl, ra, thread, music);
     }

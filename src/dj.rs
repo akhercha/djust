@@ -60,7 +60,7 @@ pub fn draw_music(d: &mut RaylibDrawHandle) {
         }
     }
 
-    let step: f32 = 1.06;
+    let step: f32 = 1.8;
     let mut f: f32 = 20.0;
     let mut m: usize = 0;
     while (f as usize) < N {
