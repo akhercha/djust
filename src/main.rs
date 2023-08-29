@@ -1,147 +1,31 @@
+mod dj;
+mod events;
 mod fft;
 
-use fft::fft;
-use num::Complex;
-use raylib::consts::KeyboardKey::KEY_SPACE;
+use dj::draw_music;
+use events::{handle_file_dropped, handle_key_events};
 use raylib::core::audio::{Music, RaylibAudio};
 use raylib::core::color::Color;
-use raylib::prelude::*;
-use std::os::raw::c_void;
+use raylib::prelude::{RaylibDraw, RaylibDrawHandle};
 
-use std::ffi::CString;
-
-// Path to your music
-const MUSIC: &str = "songs/dreams.ogg";
-// const MUSIC: &str = "songs/crankdat-higher.ogg";
-// const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
-const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
-
-#[derive(Clone, Copy)]
-struct Frame {
-    left: f32,
-    right: f32,
-}
-
-const N: usize = 16384;
-
-static mut INPS: [f32; N] = [0.0; N];
-static mut OUTS: [Complex<f32>; N] = [Complex::new(0.0, 0.0); N];
-
-fn amp(z: Complex<f32>) -> f32 {
-    let real_part = z.re.abs();
-    let imag_part = z.im.abs();
-    if real_part >= imag_part {
-        real_part
+fn draw_screen(d: &mut RaylibDrawHandle, ra: &mut RaylibAudio, music: &mut Option<Music>) {
+    if let Some(music) = music.as_mut() {
+        ra.update_music_stream(music);
+        draw_music(d);
     } else {
-        imag_part
+        d.draw_text("Drop a music!", 300, 280, 40, Color::WHITE);
     }
 }
-
-unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
-    let fs = buffer_data as *mut Frame;
-    let frames = frames as usize;
-    INPS.rotate_left(frames);
-    for i in 0..frames {
-        let avg_frame = ((*fs.add(i)).left + (*fs.add(i)).right) / 2.0;
-        INPS[N - frames + i] = avg_frame;
-    }
-}
-
-
 
 fn main() {
     let (mut rl, thread) = raylib::init().size(860, 600).title("DJust").build();
-
     let mut ra: RaylibAudio = RaylibAudio::init_audio_device();
-    let mut music = Music::load_music_stream(&thread, MUSIC).unwrap();
-    ra.play_music_stream(&mut music);
-    unsafe {
-        ffi::AttachAudioStreamProcessor(music.stream, Some(callback));
-    }
+    let mut music = None;
     rl.set_target_fps(60);
-
-    let mut counter_fft: usize = 0;
     while !rl.window_should_close() {
-        {
-            ra.update_music_stream(&mut music);
-        }
-        {
-            if rl.is_key_pressed(KEY_SPACE) {
-                if ra.is_music_stream_playing(&music) {
-                    ra.pause_music_stream(&mut music);
-                } else {
-                    ra.resume_music_stream(&mut music);
-                }
-            }
-        }
-        {
-            if rl.is_file_dropped() {
-                let droppedFiles = rl.load_dropped_files();
-    
-                if (droppedFiles.len() > 0) && droppedFiles[0].ends_with(".ogg") {
-                    println!("{:?}", droppedFiles[0]);
-                }
-            }
-        }
-        {
-            let mut d = rl.begin_drawing(&thread);
-
-            d.clear_background(Color::new(12, 12, 13, 255));
-
-            let h = d.get_screen_height() as f32;
-            let w = d.get_screen_width() as f32;
-
-            unsafe {
-                if counter_fft % 4 == 0 {
-                    fft(&INPS, &mut OUTS);
-                }
-            }
-
-            let mut max_ampl: f32 = 0.0;
-            unsafe {
-                for out in OUTS {
-                    let a = amp(out);
-                    if max_ampl < a {
-                        max_ampl = a;
-                    }
-                }
-            }
-
-            let step: f32 = 1.06;
-            let mut f: f32 = 20.0;
-            let mut m: usize = 0;
-            while (f as usize) < N {
-                f *= step;
-                m += 1;
-            }
-            let cell_w: f32 = w / m as f32;
-            m = 0;
-            f = 20.0;
-            while (f as usize) < N {
-                let f1: f32 = f * step;
-                let mut a: f32 = 0.0;
-                unsafe {
-                    let mut q: usize = f as usize;
-                    while (q < N) && (q < f1 as usize) {
-                        a += amp(OUTS[q]);
-                        q += 1;
-                    }
-                    a /= (f1 as usize - f as usize + 1) as f32;
-                    let t = a / (max_ampl / 2.0);
-                    let v_pos = Vector2 {
-                        x: cell_w * m as f32,
-                        y: h - (h * t),
-                    };
-                    let v_size = Vector2 {
-                        x: cell_w,
-                        y: (h * t),
-                    };
-                    d.draw_rectangle_v(v_pos, v_size, COLOR_PALE_RED);
-                }
-                f *= step;
-                m += 1;
-            }
-        }
-        counter_fft += 1;
+        handle_key_events(&mut rl, &mut ra, &mut music);
+        handle_file_dropped(&mut rl, &mut ra, &thread, &mut music);
+        let mut d: RaylibDrawHandle<'_> = rl.begin_drawing(&thread);
+        draw_screen(&mut d, &mut ra, &mut music);
     }
 }
