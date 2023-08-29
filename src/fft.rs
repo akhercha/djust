@@ -2,7 +2,7 @@ use num::Complex;
 use std::f32::consts::PI;
 
 fn fft_recursive(inputs: &[f32], outputs: &mut [Complex<f32>], step: usize) {
-    let n = outputs.len();
+    let n: usize = outputs.len();
     if n == 1 {
         outputs[0] = Complex::new(inputs[0], 0.0);
         return;

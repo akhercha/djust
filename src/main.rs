@@ -8,16 +8,18 @@ use raylib::core::color::Color;
 use raylib::prelude::*;
 use std::os::raw::c_void;
 
+use std::ffi::CString;
+
 // Path to your music
-// const MUSIC: &str = "songs/dreams.ogg";
-const MUSIC: &str = "songs/crankdat-higher.ogg";
+const MUSIC: &str = "songs/dreams.ogg";
+// const MUSIC: &str = "songs/crankdat-higher.ogg";
 // const MUSIC: &str = "songs/headie-one-back-to-basics.ogg";
 const COLOR_PALE_RED: Color = Color::new(245, 85, 73, 255);
 
 #[derive(Clone, Copy)]
 struct Frame {
     left: f32,
-    _right: f32,
+    right: f32,
 }
 
 const N: usize = 16384;
@@ -40,9 +42,12 @@ unsafe extern "C" fn callback(buffer_data: *mut c_void, frames: u32) {
     let frames = frames as usize;
     INPS.rotate_left(frames);
     for i in 0..frames {
-        INPS[N - frames + i] = ((*fs.add(i)).left + (*fs.add(i)).left) / 2.0;
+        let avg_frame = ((*fs.add(i)).left + (*fs.add(i)).right) / 2.0;
+        INPS[N - frames + i] = avg_frame;
     }
 }
+
+
 
 fn main() {
     let (mut rl, thread) = raylib::init().size(860, 600).title("DJust").build();
@@ -58,6 +63,27 @@ fn main() {
     let mut counter_fft: usize = 0;
     while !rl.window_should_close() {
         {
+            ra.update_music_stream(&mut music);
+        }
+        {
+            if rl.is_key_pressed(KEY_SPACE) {
+                if ra.is_music_stream_playing(&music) {
+                    ra.pause_music_stream(&mut music);
+                } else {
+                    ra.resume_music_stream(&mut music);
+                }
+            }
+        }
+        {
+            if rl.is_file_dropped() {
+                let droppedFiles = rl.load_dropped_files();
+    
+                if (droppedFiles.len() > 0) && droppedFiles[0].ends_with(".ogg") {
+                    println!("{:?}", droppedFiles[0]);
+                }
+            }
+        }
+        {
             let mut d = rl.begin_drawing(&thread);
 
             d.clear_background(Color::new(12, 12, 13, 255));
@@ -66,7 +92,7 @@ fn main() {
             let w = d.get_screen_width() as f32;
 
             unsafe {
-                if counter_fft % 3 == 0 {
+                if counter_fft % 4 == 0 {
                     fft(&INPS, &mut OUTS);
                 }
             }
@@ -81,7 +107,7 @@ fn main() {
                 }
             }
 
-            let step: f32 = 1.1;
+            let step: f32 = 1.06;
             let mut f: f32 = 20.0;
             let mut m: usize = 0;
             while (f as usize) < N {
@@ -115,18 +141,6 @@ fn main() {
                 f *= step;
                 m += 1;
             }
-        }
-        {
-            if rl.is_key_pressed(KEY_SPACE) {
-                if ra.is_music_stream_playing(&music) {
-                    ra.pause_music_stream(&mut music);
-                } else {
-                    ra.resume_music_stream(&mut music);
-                }
-            }
-        }
-        {
-            ra.update_music_stream(&mut music);
         }
         counter_fft += 1;
     }
